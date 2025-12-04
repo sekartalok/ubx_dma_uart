@@ -66,7 +66,7 @@ uint32_t ubx_devider::packet_assambler(uint8_t *rx_buffer,uint8_t delay){
 void ubx_devider::packet_devider(uint8_t *rx_buffer,uint32_t master_len ,uint32_t start,uint8_t delay){
     uint32_t i = start;
     uint8_t buffer[UBX_MAX_PACKET_SIZE_GNSS];
-    while(i < (master_len)){
+    while((i + 1) < (master_len)){
         if(rx_buffer[i] == 0xb5 && rx_buffer[i + 1] == 0x62){
             uint16_t packet_len = u2converter(rx_buffer[4+i],rx_buffer[5+i]);
             packet_len += UBX_CK_LEN_GNSS + UBX_HEADER_LEN_GNSS;

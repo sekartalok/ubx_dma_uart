@@ -1,5 +1,13 @@
 #include"gnss_translator.h"
 
+void gnss_translator::tx_mon_req_translate(uint8_t *buffer){
+    buffer[0] = UBX_HEADER_S1;
+    buffer[1] = UBX_HEADER_S2;
+    buffer[2] = UBX_MON_VER_S1;
+    buffer[3] = UBX_MON_VER_S2;
+    buffer[4] = 0x00;
+    buffer[5] = 0x00;
+}
 gnss_translator::ubx_mon_ver_fix* gnss_translator::ver_converter(uint8_t *buffer){
     return (ubx_mon_ver_fix *) buffer;
 }
@@ -70,7 +78,7 @@ void gnss_translator::tx_sattelite_setting_check(uint8_t *buffer, uint8_t sattel
     memcpy(buffer,header_valget,6);
 
     buffer[6] = 0x00; //version
-    buffer[7] = 0x01; //ram
+    buffer[7] = save; //ram
     buffer[8] = 0x00; //reserve
     buffer[9] = 0x00; //reserve
     
@@ -81,10 +89,10 @@ void gnss_translator::tx_sattelite_setting_check(uint8_t *buffer, uint8_t sattel
 int gnss_translator::rx_ack_check(uint8_t*buffer , ubx_ack_check *data){
 
     if(buffer[2] == UBX_ACK_ACK_S1 && buffer[3] == UBX_ACK_ACK_S2){
-        memcpy(data,buffer,sizeof(ubx_ack_check));
+        memcpy(data,buffer + 6,sizeof(ubx_ack_check));
         return 1;
     }else if(buffer[2] == UBX_ACK_NAK_S1 && buffer[3] == UBX_ACK_NAK_S2){
-        memcpy(data,buffer,sizeof(ubx_ack_check));
+        memcpy(data,buffer + 6,sizeof(ubx_ack_check));
         return 0;
     }
     return -1;

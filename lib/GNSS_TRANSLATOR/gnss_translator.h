@@ -142,11 +142,12 @@ class gnss_translator{
 
     public:
 
+    void tx_mon_req_translate(uint8_t *buffer);
     void tx_sattelite_setting_check(uint8_t *buffer, uint8_t sattel, uint8_t save );
     void tx_sattelite_translate(uint8_t *buffer ,uint8_t *sattel,uint8_t sattek_size,uint8_t save, bool en);
     void rx_nav_translate(uint8_t *buffer ,ubx_nav_pvt *data);
     void rx_mon_ver_translate(uint8_t *buffer, ubx_mon_ver *ver,uint32_t size);
-    int rx_ack_check(uint8_t*buffer , ubx_ack_check data);
+    int rx_ack_check(uint8_t*buffer , ubx_ack_check *data);
     
 
 
