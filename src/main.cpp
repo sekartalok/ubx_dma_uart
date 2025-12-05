@@ -84,6 +84,8 @@ void send(){
   //
  
 
+
+  
   my_ub.tx_mon_req_translate(buffer);
   my_gps.addchecksum(buffer);
    
@@ -158,7 +160,7 @@ void datarechive(){
 
   while(my_gps.in_queue() != 0){
     //Serial.println(my_gps.in_queue());
-    my_gps.receive(buffer,10);
+    my_gps.receive(buffer);
 
 
     
@@ -218,14 +220,14 @@ void uart_rx_task(void *arg) {
                 if (len >= 1) { 
                   send();
                   Serial.println("vvvvvvvvvvv");
-                  print_hex(RX_TAG,rx_buffer,len);
+                  print_hex("A",rx_buffer,len);
                   Serial.println("++++++");                  
             
-                  my_gps.update_data(rx_buffer,len,20);
+                  my_gps.update_data(rx_buffer,len);
                   datarechive();
 
 
-                  delay(500);
+          
                  // print_packet();
 
 
@@ -251,7 +253,15 @@ void setup() {
   my_ub.tx_sattelite_translate(buffer,st,sizeof(st),UBX_ALL_LAYER,false);
   
   Serial.begin(115200);
-  my_gps.begin(20);
+
+  ubx_config confi{
+    .queue_data_size = 20,
+    .queue_event_size = 20,
+    .data_delay =  1,
+    .event_delay = 1,
+    .update_delay = 1
+  };
+  my_gps.begin(&confi);
 
   //queuehandler 
   tx_data_handler = xQueueCreate(50,sizeof(uint8_t)*TX_BUF_SIZE);

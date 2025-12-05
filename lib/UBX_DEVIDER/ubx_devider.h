@@ -10,6 +10,20 @@
 #include "soc/uart_reg.h"
 
 #define UBX_MAX_PACKET_SIZE_GNSS 1024
+#define NAV_PVT_SIZE 100
+
+typedef struct {
+
+    uint16_t queue_data_size;
+    uint16_t queue_event_size;
+
+    uint8_t data_delay;
+    uint8_t event_delay;
+
+    uint8_t update_delay;
+
+
+} ubx_config;
 
 typedef enum{
     UBX_BAUNDRATE_GNSS = 115200,
@@ -31,12 +45,17 @@ class ubx_devider{
 
     //packet wraper
     QueueHandle_t packet_handler;
+    QueueHandle_t event_handler;
 
+    uint8_t packet_delay{1};
+    uint8_t event_delay{1};
+    uint8_t update_delay{1};
     
     uint16_t checksum_calculate(uint8_t *buffer,uint8_t *ck_a,uint8_t *ck_b);
-    void packet_devider(uint8_t *buffer,uint32_t master_len,uint32_t start,uint8_t delay);
-    uint32_t packet_assambler(uint8_t *buffer,uint8_t delay);
+    void packet_devider(uint8_t *buffer,uint32_t master_len,uint32_t start);
+    uint32_t packet_assambler(uint8_t *buffer);
 
+    void queue_manager(uint8_t *buffer);
 
     public:
         //ESP 32 UART CONFIG 8N1
@@ -49,13 +68,15 @@ class ubx_devider{
         .source_clk = UART_SCLK_APB
     };
 
-    void begin(uint8_t queue_size);
+    void begin(ubx_config *cfg);
     void addchecksum( uint8_t *buffer_rx);
     bool checksum( uint8_t *buffer_rx );
-    void update_data(uint8_t *buffer_rx,uint32_t len,uint8_t delay);
+    void update_data(uint8_t *buffer_rx,uint32_t len);
     void header_converter( uint8_t *buffer_rx );
-    esp_err_t receive(uint8_t *buffer,uint8_t delay);
+    esp_err_t receive(uint8_t *buffer);
+    esp_err_t event_receive(uint8_t *buffer);
     uint32_t in_queue();
+    uint32_t event_in_queue();
 
     //aux converter helper
     //16 

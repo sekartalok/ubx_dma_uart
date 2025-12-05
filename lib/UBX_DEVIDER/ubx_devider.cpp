@@ -31,19 +31,39 @@ int32_t ubx_devider::i4converter(uint8_t h1 ,uint8_t l1, uint8_t h2 ,uint8_t l2)
 }
 
 
-void ubx_devider::begin(uint8_t queue_size){
-    packet_handler= xQueueCreate(queue_size,sizeof(uint8_t)*UBX_MAX_PACKET_SIZE_GNSS);
+void ubx_devider::begin(ubx_config *cfg){
+    event_handler = xQueueCreate(cfg->queue_event_size,sizeof(uint8_t) * UBX_MAX_PACKET_SIZE_GNSS);
+    packet_handler= xQueueCreate(cfg->queue_data_size,sizeof(uint8_t) * NAV_PVT_SIZE);
+
+    packet_delay = cfg->data_delay;
+    event_delay = cfg->event_delay;
+
+    update_delay = cfg->update_delay;
+
 }
-void ubx_devider::update_data(uint8_t *rx_buffer,uint32_t len,uint8_t delay){
+
+
+void ubx_devider::update_data(uint8_t *rx_buffer,uint32_t len){
     uint32_t start_read = 0;
     if(is_broken){
         is_broken = false;
-        start_read = packet_assambler(rx_buffer,delay);
+        start_read = packet_assambler(rx_buffer);
     }
-    packet_devider(rx_buffer,len,start_read,delay);
+    packet_devider(rx_buffer,len,start_read);
     memset(rx_buffer,0x00,UBX_MAX_PACKET_SIZE_GNSS);
 }
-uint32_t ubx_devider::packet_assambler(uint8_t *rx_buffer,uint8_t delay){
+
+
+void ubx_devider::queue_manager(uint8_t *buffer){
+
+    if(buffer[2] == 0x01 && buffer[3] == 0x07 ){
+        xQueueSend(packet_handler,buffer,pdMS_TO_TICKS(update_delay));
+    }else{
+        xQueueSend(event_handler,buffer,pdMS_TO_TICKS(update_delay));
+    }
+}
+
+uint32_t ubx_devider::packet_assambler(uint8_t *rx_buffer){
     uint8_t buffer[UBX_MAX_PACKET_SIZE_GNSS];
     memset(buffer,0x00,UBX_MAX_PACKET_SIZE_GNSS);
     uint32_t last_size = full_size - first_size;
@@ -56,14 +76,13 @@ uint32_t ubx_devider::packet_assambler(uint8_t *rx_buffer,uint8_t delay){
         return 0;
     }
    
-
-    xQueueSend(packet_handler,buffer,pdMS_TO_TICKS(delay));
+    queue_manager(buffer);
 
 
     return last_size - 1;
 
 }
-void ubx_devider::packet_devider(uint8_t *rx_buffer,uint32_t master_len ,uint32_t start,uint8_t delay){
+void ubx_devider::packet_devider(uint8_t *rx_buffer,uint32_t master_len ,uint32_t start){
     uint32_t i = start;
     uint8_t buffer[UBX_MAX_PACKET_SIZE_GNSS];
     while((i + 1) < (master_len)){
@@ -76,7 +95,7 @@ void ubx_devider::packet_devider(uint8_t *rx_buffer,uint32_t master_len ,uint32_
                 memset(buffer,0x00,UBX_MAX_PACKET_SIZE_GNSS);
                 memcpy(buffer,rx_buffer + i,packet_len);
 
-                xQueueSend(packet_handler,buffer,pdMS_TO_TICKS(delay));
+                queue_manager(buffer);
 
                 i += packet_len;
 
@@ -141,11 +160,20 @@ void ubx_devider::addchecksum( uint8_t *buffer_tx){
 
 }
 
-esp_err_t ubx_devider::receive(uint8_t *buffer_rx , uint8_t delay){
+esp_err_t ubx_devider::event_receive(uint8_t *buffer_rx ){
     esp_err_t err;
 
     memset(buffer_rx,0x00,UBX_MAX_PACKET_SIZE_GNSS);
-    err = xQueueReceive(packet_handler,buffer_rx,pdMS_TO_TICKS(delay));
+    err = xQueueReceive(event_handler,buffer_rx,pdMS_TO_TICKS(packet_delay));
+
+    return err;
+}
+
+esp_err_t ubx_devider::receive(uint8_t *buffer_rx ){
+    esp_err_t err;
+
+    memset(buffer_rx,0x00,UBX_MAX_PACKET_SIZE_GNSS);
+    err = xQueueReceive(packet_handler,buffer_rx,pdMS_TO_TICKS(packet_delay));
 
 
     return err;
@@ -155,7 +183,10 @@ uint32_t ubx_devider::in_queue(){
     return (uint32_t )uxQueueMessagesWaiting(packet_handler);
 }
 
+uint32_t ubx_devider::event_in_queue(){
+    return (uint32_t )uxQueueMessagesWaiting(event_handler);
 
+}
 
 
 
