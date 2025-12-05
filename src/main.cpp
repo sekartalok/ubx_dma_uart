@@ -84,22 +84,12 @@ void send(){
   //
  
 
-   my_ub.tx_sattelite_setting_check(buffer,UBX_BEIDOU,UBX_ALL_LAYER);
-  
-   my_gps.addchecksum(buffer);
+  my_ub.tx_mon_req_translate(buffer);
+  my_gps.addchecksum(buffer);
    
    xQueueSend(tx_data_handler,buffer,portMAX_DELAY );
 
-   /*
-  memset(buffer,0x00,sizeof(buffer));
 
-   memset(tx_buffer,0x00,sizeof(tx_buffer));
-  my_ub.tx_sattelite_setting_check(buffer,UBX_GALILEO,UBX_ALL_LAYER);
-
-     my_gps.addchecksum(buffer);
-   
-   xQueueSend(tx_data_handler,buffer,portMAX_DELAY );
-*/
 
 
 }
@@ -257,7 +247,7 @@ void setup() {
   uint8_t buffer[RX_BUF_SIZE];
   //serial
 
-  uint8_t st[] = {UBX_BEIDOU};
+  uint8_t st[] = {UBX_GALILEO};
   my_ub.tx_sattelite_translate(buffer,st,sizeof(st),UBX_ALL_LAYER,false);
   
   Serial.begin(115200);
