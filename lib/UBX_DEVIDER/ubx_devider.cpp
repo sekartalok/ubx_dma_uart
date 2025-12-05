@@ -92,7 +92,7 @@ void ubx_devider::packet_devider(uint8_t *rx_buffer,uint32_t master_len ,uint32_
     // for packet to be pass to assambler at least the header is full or minimum 6
     // this searching for high rate data max 2016 devider and it jump from 1 header to an other if data is in normal condition
     // in abnormal condition it will search bit by bit, it much slower but more accurate 
- 
+    // from stress test it take 1 millis to prosses 5000 buffer uint8_t 
 
     
     while( (i + 5) < master_len){

@@ -9,9 +9,12 @@
 #include "soc/uart_struct.h"
 #include "soc/uart_reg.h"
 
+
 #define UBX_MAX_PACKET_SIZE_GNSS 2016
 #define NAV_PVT_SIZE 100
 
+
+// config for the queue 
 typedef struct {
 
     uint16_t queue_data_size;
@@ -47,9 +50,9 @@ class ubx_devider{
     QueueHandle_t packet_handler;
     QueueHandle_t event_handler;
 
-    uint8_t packet_delay{1};
-    uint8_t event_delay{1};
-    uint8_t update_delay{1};
+    uint8_t packet_delay;
+    uint8_t event_delay;
+    uint8_t update_delay;
     
     uint16_t checksum_calculate(uint8_t *buffer,uint8_t *ck_a,uint8_t *ck_b);
     void packet_devider(uint8_t *buffer,uint32_t master_len,uint32_t start);
