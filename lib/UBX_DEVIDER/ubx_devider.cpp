@@ -85,7 +85,18 @@ uint32_t ubx_devider::packet_assambler(uint8_t *rx_buffer){
 void ubx_devider::packet_devider(uint8_t *rx_buffer,uint32_t master_len ,uint32_t start){
     uint32_t i = start;
     uint8_t buffer[UBX_MAX_PACKET_SIZE_GNSS];
-    while((i + 1) < (master_len)){
+
+    // if packet less than 6 array long it will be skip : 
+    // this logic still speed priority 
+    // this logic not count by bit but calculate search bit i - packet size from header
+    // for packet to be pass to assambler at least the header is full or minimum 6
+    // this searching for high rate data max 2016 devider and it jump from 1 header to an other if data is in normal condition
+    // in abnormal condition it will search bit by bit, it much slower but more accurate 
+ 
+
+    
+    while( (i + 5) < master_len){
+
         if(rx_buffer[i] == 0xb5 && rx_buffer[i + 1] == 0x62){
             uint16_t packet_len = u2converter(rx_buffer[4+i],rx_buffer[5+i]);
             packet_len += UBX_CK_LEN_GNSS + UBX_HEADER_LEN_GNSS;

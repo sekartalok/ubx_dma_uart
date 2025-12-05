@@ -7,7 +7,7 @@
 #define UART_PORT       UART_NUM_2
 #define UART_TX_PIN     GPIO_NUM_42
 #define UART_RX_PIN     GPIO_NUM_46
-#define RX_BUF_SIZE     2048
+#define RX_BUF_SIZE     5000
 #define RX_QUEUE_SIZE   50
 #define TX_BUF_SIZE     2048 
 #define TX_QUEUE_SIZE   50
@@ -36,6 +36,7 @@ bool s{false};
 bool set_test{false};
 ubx_devider my_gps;
 gnss_translator my_ub;
+
 
 
 /*
@@ -223,8 +224,16 @@ void uart_rx_task(void *arg) {
                   print_hex("A",rx_buffer,len);
                   Serial.println("++++++");                  
             
+                  uint32_t startmillis = millis();
                   my_gps.update_data(rx_buffer,len);
+                  Serial.println("___________");
+                  Serial.println("time to take");
+                  uint32_t current = millis();
+                  uint32_t timetake = current - startmillis;
+                  Serial.println((uint32_t) timetake);
                   datarechive();
+
+                  vTaskDelay(5000);
 
 
           
@@ -255,11 +264,11 @@ void setup() {
   Serial.begin(115200);
 
   ubx_config confi{
-    .queue_data_size = 20,
-    .queue_event_size = 20,
-    .data_delay =  1,
-    .event_delay = 1,
-    .update_delay = 1
+    .queue_data_size = 700,
+    .queue_event_size = 700,
+    .data_delay =  0,
+    .event_delay = 0,
+    .update_delay = 0
   };
   my_gps.begin(&confi);
 
@@ -277,7 +286,7 @@ void setup() {
   uart_set_pin(UART_PORT, UART_TX_PIN, UART_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
     
 
-  xTaskCreatePinnedToCore(uart_rx_task, "uart_rx_task", 4096, NULL, 10, &rx_task, 1);
+  xTaskCreatePinnedToCore(uart_rx_task, "uart_rx_task", 50000, NULL, 10, &rx_task, 1);
   xTaskCreatePinnedToCore(uart_tx_task, "uart_tx_task", 4096, NULL, 9, &tx_task, 1);
 
   

@@ -9,7 +9,7 @@
 #include "soc/uart_struct.h"
 #include "soc/uart_reg.h"
 
-#define UBX_MAX_PACKET_SIZE_GNSS 1024
+#define UBX_MAX_PACKET_SIZE_GNSS 2016
 #define NAV_PVT_SIZE 100
 
 typedef struct {
