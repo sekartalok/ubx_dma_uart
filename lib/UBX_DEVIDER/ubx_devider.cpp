@@ -49,6 +49,7 @@ void ubx_devider::update_data(uint8_t *rx_buffer,uint32_t len){
         is_broken = false;
         start_read = packet_assambler(rx_buffer);
     }
+    
     packet_devider(rx_buffer,len,start_read);
     memset(rx_buffer,0x00,UBX_MAX_PACKET_SIZE_GNSS);
 }
@@ -78,8 +79,7 @@ uint32_t ubx_devider::packet_assambler(uint8_t *rx_buffer){
    
     queue_manager(buffer);
 
-
-    return last_size - 1;
+    return last_size;
 
 }
 void ubx_devider::packet_devider(uint8_t *rx_buffer,uint32_t master_len ,uint32_t start){
@@ -95,7 +95,7 @@ void ubx_devider::packet_devider(uint8_t *rx_buffer,uint32_t master_len ,uint32_
     // from stress test it take 1 millis to prosses 5000 buffer uint8_t 
 
     
-    while( (i + 5) < master_len){
+    while((master_len - i) > 0){
 
         if(rx_buffer[i] == 0xb5 && rx_buffer[i + 1] == 0x62){
             uint16_t packet_len = u2converter(rx_buffer[4+i],rx_buffer[5+i]);
@@ -113,7 +113,7 @@ void ubx_devider::packet_devider(uint8_t *rx_buffer,uint32_t master_len ,uint32_
             }else{
                 // to check if packet only half 
                 
-                if((i + packet_len) >= master_len){
+                if((master_len - i) >= 6){
                     is_broken = true;
                     first_size = master_len - i;
                     full_size = packet_len;

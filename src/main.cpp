@@ -159,9 +159,9 @@ void datarechive(){
   ubx_ack_check ack;
   //if(buffer[0] != 0x00){
 
-  while(my_gps.in_queue() != 0){
+  while(my_gps.event_in_queue() != 0){
     //Serial.println(my_gps.in_queue());
-    my_gps.receive(buffer);
+    my_gps.event_receive(buffer);
 
 
     
@@ -233,7 +233,7 @@ void uart_rx_task(void *arg) {
                   Serial.println((uint32_t) timetake);
                   datarechive();
 
-                  vTaskDelay(5000);
+                  
 
 
           
