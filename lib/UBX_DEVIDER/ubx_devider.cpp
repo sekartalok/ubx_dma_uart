@@ -45,33 +45,61 @@ void ubx_devider::begin(ubx_config *cfg){
 
 void ubx_devider::update_data(uint8_t *rx_buffer,uint32_t len){
     uint32_t start_read = 0;
-    if(is_broken){
-        is_broken = false;
-        start_read = packet_assambler(rx_buffer);
+    if(is_broken_HL){
+        is_broken_HL = false;
+        start_read = packet_assembler_HL(rx_buffer);
+    }
+    else if(is_broken_HF){
+        is_broken_HF = false;
+        start_read = packet_assambler_HF(rx_buffer);
     }
     
     packet_devider(rx_buffer,len,start_read);
-    memset(rx_buffer,0x00,UBX_MAX_PACKET_SIZE_GNSS);
+    
 }
 
 
 void ubx_devider::queue_manager(uint8_t *buffer){
 
+
+    Serial.printf("%02X" ,buffer[2]);
+    Serial.println();
+     Serial.printf("%02X", buffer[3]);
+     Serial.println();
     if(buffer[2] == 0x01 && buffer[3] == 0x07 ){
+        Serial.println("ZZZZ");
         xQueueSend(packet_handler,buffer,pdMS_TO_TICKS(update_delay));
     }else{
+        Serial.println("ZZZZFFFF");
         xQueueSend(event_handler,buffer,pdMS_TO_TICKS(update_delay));
     }
 }
 
-uint32_t ubx_devider::packet_assambler(uint8_t *rx_buffer){
+uint32_t ubx_devider::packet_assembler_HL(uint8_t *rx_buffer){
     uint8_t buffer[UBX_MAX_PACKET_SIZE_GNSS];
-    memset(buffer,0x00,UBX_MAX_PACKET_SIZE_GNSS);
-    uint32_t last_size = full_size - first_size;
+    uint32_t sec_size = 6 - full_size_HL;
 
-    memcpy(buffer,rx_half,first_size);
-    memcpy(buffer + first_size ,rx_buffer,last_size);
-    memset(rx_half,0x00,UBX_MAX_PACKET_SIZE_GNSS);
+    //assemble the header
+    memcpy(rx_half_HL + full_size_HL, rx_buffer , 6 - full_size_HL);
+    //copy full header
+    memcpy(buffer,rx_half_HL,6);
+    uint32_t size = u2converter(buffer[4],buffer[5]);
+    //copy full data
+    memcpy(buffer + 6, rx_buffer + sec_size, size + 2);
+
+    queue_manager(buffer);
+
+    return sec_size + 2 + size;
+}
+
+uint32_t ubx_devider::packet_assambler_HF(uint8_t *rx_buffer){
+    uint8_t buffer[UBX_MAX_PACKET_SIZE_GNSS];
+    uint32_t last_size = full_size_HF - first_size_HF;
+
+    memset(buffer,0x00,UBX_MAX_PACKET_SIZE_GNSS);
+    memcpy(buffer,rx_half_HF,first_size_HF);
+    memcpy(buffer + first_size_HF ,rx_buffer,last_size);
+    
 
     if(!checksum(buffer)){  
         return 0;
@@ -86,24 +114,26 @@ void ubx_devider::packet_devider(uint8_t *rx_buffer,uint32_t master_len ,uint32_
     uint32_t i = start;
     uint8_t buffer[UBX_MAX_PACKET_SIZE_GNSS];
 
-    // if packet less than 6 array long it will be skip : 
-    // this logic still speed priority 
-    // this logic not count by bit but calculate search bit i - packet size from header
-    // for packet to be pass to assambler at least the header is full or minimum 6
-    // this searching for high rate data max 2016 devider and it jump from 1 header to an other if data is in normal condition
-    // in abnormal condition it will search bit by bit, it much slower but more accurate 
-    // from stress test it take 1 millis to prosses 5000 buffer uint8_t 
 
     
     while((master_len - i) > 0){
+        if((master_len - i) < 6){
+            //head is not full ( less than 6)
+            if(rx_buffer[i] != UBX_HEADER_SYNC_1_GNSS){break;}
+            full_size_HL = master_len - i;
+            is_broken_HL = true;
+            memset(rx_half_HL ,0x00 ,6);
+            memcpy(rx_half_HL,rx_buffer + i,full_size_HL);
+            break;
 
-        if(rx_buffer[i] == 0xb5 && rx_buffer[i + 1] == 0x62){
+        }
+        else if(rx_buffer[i] == 0xb5 && rx_buffer[i + 1] == 0x62){
             uint16_t packet_len = u2converter(rx_buffer[4+i],rx_buffer[5+i]);
             packet_len += UBX_CK_LEN_GNSS + UBX_HEADER_LEN_GNSS;
             
             if(checksum(rx_buffer + i)){
            
-                memset(buffer,0x00,UBX_MAX_PACKET_SIZE_GNSS);
+               // memset(rx_buffer,0x00,UBX_MAX_PACKET_SIZE_GNSS);
                 memcpy(buffer,rx_buffer + i,packet_len);
 
                 queue_manager(buffer);
@@ -111,17 +141,17 @@ void ubx_devider::packet_devider(uint8_t *rx_buffer,uint32_t master_len ,uint32_
                 i += packet_len;
 
             }else{
-                // to check if packet only half 
+                // to check if packet only half but full head (6) 
                 
-                if((master_len - i) >= 6){
-                    is_broken = true;
-                    first_size = master_len - i;
-                    full_size = packet_len;
-
-                    memcpy(rx_half,rx_buffer + i, master_len - i);
-                    break;
-                }
-                i++;
+              
+                is_broken_HF = true;
+                first_size_HF = master_len - i;
+                full_size_HF = packet_len;
+                memset(rx_half_HF,0x00,UBX_MAX_PACKET_SIZE_GNSS);
+                memcpy(rx_half_HF,rx_buffer + i, master_len - i);
+                break;
+                
+                
             }
         }else{
             i++;

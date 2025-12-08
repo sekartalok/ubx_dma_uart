@@ -40,11 +40,14 @@ class ubx_devider{
     private:
 
     // HALF PACKET DEVIDER
-    uint8_t rx_half[UBX_MAX_PACKET_SIZE_GNSS];
-    bool is_broken{false};
+    uint8_t rx_half_HF[UBX_MAX_PACKET_SIZE_GNSS];
+    uint8_t rx_half_HL[UBX_HEADER_LEN_GNSS];
+    bool is_broken_HF{false};
+    bool is_broken_HL{false};
 
-    uint32_t first_size;
-    uint32_t full_size;
+    uint32_t first_size_HF;
+    uint32_t full_size_HF;
+    uint32_t full_size_HL;
 
     //packet wraper
     QueueHandle_t packet_handler;
@@ -56,7 +59,8 @@ class ubx_devider{
     
     uint16_t checksum_calculate(uint8_t *buffer,uint8_t *ck_a,uint8_t *ck_b);
     void packet_devider(uint8_t *buffer,uint32_t master_len,uint32_t start);
-    uint32_t packet_assambler(uint8_t *buffer);
+    uint32_t packet_assambler_HF(uint8_t *buffer);
+    uint32_t packet_assembler_HL(uint8_t *buffer);
 
     void queue_manager(uint8_t *buffer);
 
