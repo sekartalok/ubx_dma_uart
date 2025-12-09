@@ -2,6 +2,7 @@
 
 
 // helper
+//16
 uint16_t ubx_devider::u2converter(uint8_t h, uint8_t l){
   return (uint16_t) h | (uint16_t) (l << 8);
 }
@@ -10,6 +11,7 @@ int16_t ubx_devider:: i2converter(uint8_t h,uint8_t l){
   return(int16_t) val;
 }
 
+//32
 uint32_t ubx_devider::u4converter(uint8_t h1, uint8_t l1, uint8_t h2, uint8_t l2){
   uint16_t temp_h;
   uint16_t temp_l;
@@ -30,7 +32,7 @@ int32_t ubx_devider::i4converter(uint8_t h1 ,uint8_t l1, uint8_t h2 ,uint8_t l2)
   return (int32_t) val;
 }
 
-
+//start the queue
 void ubx_devider::begin(ubx_config *cfg){
     event_handler = xQueueCreate(cfg->queue_event_size,sizeof(uint8_t) * UBX_MAX_PACKET_SIZE_GNSS);
     packet_handler= xQueueCreate(cfg->queue_data_size,sizeof(uint8_t) * NAV_PVT_SIZE);
@@ -43,6 +45,7 @@ void ubx_devider::begin(ubx_config *cfg){
 }
 
 
+//packet management 
 void ubx_devider::update_data(uint8_t *rx_buffer,uint32_t len){
     uint32_t start_read = 0;
     if(is_broken_HL){
@@ -60,17 +63,12 @@ void ubx_devider::update_data(uint8_t *rx_buffer,uint32_t len){
 
 
 void ubx_devider::queue_manager(uint8_t *buffer){
-
-
-    Serial.printf("%02X" ,buffer[2]);
-    Serial.println();
-     Serial.printf("%02X", buffer[3]);
-     Serial.println();
+  
     if(buffer[2] == 0x01 && buffer[3] == 0x07 ){
-        Serial.println("ZZZZ");
+        //gps data
         xQueueSend(packet_handler,buffer,pdMS_TO_TICKS(update_delay));
     }else{
-        Serial.println("ZZZZFFFF");
+        //gps event 
         xQueueSend(event_handler,buffer,pdMS_TO_TICKS(update_delay));
     }
 }
@@ -83,9 +81,20 @@ uint32_t ubx_devider::packet_assembler_HL(uint8_t *rx_buffer){
     memcpy(rx_half_HL + full_size_HL, rx_buffer , 6 - full_size_HL);
     //copy full header
     memcpy(buffer,rx_half_HL,6);
+
+    // check the second header 
+    if(buffer[1] !=UBX_HEADER_SYNC_2_GNSS){
+        return 0;
+    }
+
     uint32_t size = u2converter(buffer[4],buffer[5]);
     //copy full data
     memcpy(buffer + 6, rx_buffer + sec_size, size + 2);
+
+    //check if data corrupted or not 
+    if(!checksum(buffer)){
+        return 0;
+    }
 
     queue_manager(buffer);
 
@@ -97,10 +106,12 @@ uint32_t ubx_devider::packet_assambler_HF(uint8_t *rx_buffer){
     uint32_t last_size = full_size_HF - first_size_HF;
 
     memset(buffer,0x00,UBX_MAX_PACKET_SIZE_GNSS);
+    //copy the save data
     memcpy(buffer,rx_half_HF,first_size_HF);
+    //copy the current data 
     memcpy(buffer + first_size_HF ,rx_buffer,last_size);
     
-
+    //check if data currupted or not
     if(!checksum(buffer)){  
         return 0;
     }
@@ -115,7 +126,8 @@ void ubx_devider::packet_devider(uint8_t *rx_buffer,uint32_t master_len ,uint32_
     uint8_t buffer[UBX_MAX_PACKET_SIZE_GNSS];
 
 
-    
+    // nasa loop standar, using static well read loop condition to prevent run away loop
+    // can be change to always loop because the master - i < 6 will act as break point 
     while((master_len - i) > 0){
         if((master_len - i) < 6){
             //head is not full ( less than 6)
@@ -127,13 +139,13 @@ void ubx_devider::packet_devider(uint8_t *rx_buffer,uint32_t master_len ,uint32_
             break;
 
         }
-        else if(rx_buffer[i] == 0xb5 && rx_buffer[i + 1] == 0x62){
+        else if(rx_buffer[i] == UBX_HEADER_SYNC_1_GNSS && rx_buffer[i + 1] == UBX_HEADER_SYNC_2_GNSS){
             uint16_t packet_len = u2converter(rx_buffer[4+i],rx_buffer[5+i]);
             packet_len += UBX_CK_LEN_GNSS + UBX_HEADER_LEN_GNSS;
             
             if(checksum(rx_buffer + i)){
            
-               // memset(rx_buffer,0x00,UBX_MAX_PACKET_SIZE_GNSS);
+                memset(buffer,0x00,UBX_MAX_PACKET_SIZE_GNSS);
                 memcpy(buffer,rx_buffer + i,packet_len);
 
                 queue_manager(buffer);
@@ -161,6 +173,7 @@ void ubx_devider::packet_devider(uint8_t *rx_buffer,uint32_t master_len ,uint32_
     }
 }
 
+//validate check and adder 
 uint16_t ubx_devider::checksum_calculate(uint8_t *buffer,uint8_t *ck_a,uint8_t *ck_b){
     int16_t len = u2converter(buffer[4],buffer[5]);
     len += UBX_HEADER_LEN_GNSS;
@@ -201,6 +214,7 @@ void ubx_devider::addchecksum( uint8_t *buffer_tx){
 
 }
 
+// data collector 
 esp_err_t ubx_devider::event_receive(uint8_t *buffer_rx ){
     esp_err_t err;
 

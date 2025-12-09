@@ -166,7 +166,7 @@ void datarechive(){
     print_hex("TELE",buffer,my_gps.u2converter(buffer[4],buffer[5])+2+6);
     
   }
-/*
+
   while(my_gps.event_in_queue() != 0){
     //Serial.println(my_gps.in_queue());
     my_gps.event_receive(buffer);
@@ -207,7 +207,7 @@ void datarechive(){
 
 
   }
-  */
+  
   //}
  // print_hex("GNSS",buffer,my_gps.u2converter(buffer[4],buffer[5])+2+6);
 }

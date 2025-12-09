@@ -28,6 +28,8 @@ typedef struct {
 
 } ubx_config;
 
+//general setting and information
+
 typedef enum{
     UBX_BAUNDRATE_GNSS = 115200,
     UBX_HEADER_LEN_GNSS = 6,
@@ -39,12 +41,19 @@ typedef enum{
 class ubx_devider{
     private:
 
+    /********************************
+    
+    HF = HEAD FULL (size of 6)
+    HL = HEAD LOW  (size less than 6) 
+    
+    *********************************/
     // HALF PACKET DEVIDER
     uint8_t rx_half_HF[UBX_MAX_PACKET_SIZE_GNSS];
     uint8_t rx_half_HL[UBX_HEADER_LEN_GNSS];
     bool is_broken_HF{false};
     bool is_broken_HL{false};
 
+    //size pass management 
     uint32_t first_size_HF;
     uint32_t full_size_HF;
     uint32_t full_size_HL;
@@ -53,10 +62,12 @@ class ubx_devider{
     QueueHandle_t packet_handler;
     QueueHandle_t event_handler;
 
+    //queue delay
     uint8_t packet_delay;
     uint8_t event_delay;
     uint8_t update_delay;
     
+    //function helper for manage the data to queue
     uint16_t checksum_calculate(uint8_t *buffer,uint8_t *ck_a,uint8_t *ck_b);
     void packet_devider(uint8_t *buffer,uint32_t master_len,uint32_t start);
     uint32_t packet_assambler_HF(uint8_t *buffer);
