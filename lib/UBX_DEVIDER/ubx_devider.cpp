@@ -61,7 +61,7 @@ void ubx_devider::update_data(uint8_t *rx_buffer,uint32_t len){
     
 }
 
-
+//queue manager 
 void ubx_devider::queue_manager(uint8_t *buffer){
   
     if(buffer[2] == 0x01 && buffer[3] == 0x07 ){
@@ -72,6 +72,8 @@ void ubx_devider::queue_manager(uint8_t *buffer){
         xQueueSend(event_handler,buffer,pdMS_TO_TICKS(update_delay));
     }
 }
+
+//packet assembler 
 
 uint32_t ubx_devider::packet_assembler_HL(uint8_t *rx_buffer){
     uint8_t buffer[UBX_MAX_PACKET_SIZE_GNSS];
@@ -121,22 +123,32 @@ uint32_t ubx_devider::packet_assambler_HF(uint8_t *rx_buffer){
     return last_size;
 
 }
+
+//packet devider 
 void ubx_devider::packet_devider(uint8_t *rx_buffer,uint32_t master_len ,uint32_t start){
     uint32_t i = start;
     uint8_t buffer[UBX_MAX_PACKET_SIZE_GNSS];
 
 
-    // nasa loop standar, using static well read loop condition to prevent run away loop
-    // can be change to always loop because the master - i < 6 will act as break point 
+    //while for devide the packet to 1 chunck 
     while((master_len - i) > 0){
         if((master_len - i) < 6){
             //head is not full ( less than 6)
-            if(rx_buffer[i] != UBX_HEADER_SYNC_1_GNSS){break;}
+            if(rx_buffer[i] != UBX_HEADER_SYNC_1_GNSS)
+            {
+                //skip for corrupt data 
+                i++;
+
+            } else{
+
             full_size_HL = master_len - i;
             is_broken_HL = true;
             memset(rx_half_HL ,0x00 ,6);
             memcpy(rx_half_HL,rx_buffer + i,full_size_HL);
             break;
+
+            }
+
 
         }
         else if(rx_buffer[i] == UBX_HEADER_SYNC_1_GNSS && rx_buffer[i + 1] == UBX_HEADER_SYNC_2_GNSS){
@@ -144,7 +156,8 @@ void ubx_devider::packet_devider(uint8_t *rx_buffer,uint32_t master_len ,uint32_
             packet_len += UBX_CK_LEN_GNSS + UBX_HEADER_LEN_GNSS;
             
             if(checksum(rx_buffer + i)){
-           
+                
+                // full packet no lost 
                 memset(buffer,0x00,UBX_MAX_PACKET_SIZE_GNSS);
                 memcpy(buffer,rx_buffer + i,packet_len);
 
@@ -166,6 +179,7 @@ void ubx_devider::packet_devider(uint8_t *rx_buffer,uint32_t master_len ,uint32_
                 
             }
         }else{
+            // skip for corrupt data 
             i++;
         }
 

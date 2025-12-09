@@ -10,11 +10,30 @@
 #include "soc/uart_reg.h"
 
 
+// estimated total packet size / packet data
+// can count the max queue by max DMA_ATTR / ubx_max_packet_size_gnss or nav_pvt_size for nav
 #define UBX_MAX_PACKET_SIZE_GNSS 2016
+// max size for nav pvt 6 (header) + 92 (value) + 2 (validate)
 #define NAV_PVT_SIZE 100
 
 
 // config for the queue 
+/***********************************
+
+  //example usage
+
+  ubx_config confi{
+    .queue_data_size = 700,
+    .queue_event_size = 700,
+    .data_delay =  0,
+    .event_delay = 0,
+    .update_delay = 0
+  };
+  
+  my_gps.begin(&confi);
+
+
+***********************************/
 typedef struct {
 
     uint16_t queue_data_size;
@@ -90,7 +109,7 @@ class ubx_devider{
     void addchecksum( uint8_t *buffer_rx);
     bool checksum( uint8_t *buffer_rx );
     void update_data(uint8_t *buffer_rx,uint32_t len);
-    void header_converter( uint8_t *buffer_rx );
+    void header_converter( uint8_t *buffer_rx );    
     esp_err_t receive(uint8_t *buffer);
     esp_err_t event_receive(uint8_t *buffer);
     uint32_t in_queue();

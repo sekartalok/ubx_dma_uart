@@ -25,6 +25,7 @@ DMA_ATTR uint8_t tx_buffer[TX_BUF_SIZE];
 //tx queue handler
 QueueHandle_t tx_data_handler;
 
+//data manager and translator 
 ubx_devider my_gps;
 gnss_translator my_ub;
 
@@ -41,6 +42,7 @@ void print_hex(const char *tag, const uint8_t* buffer, int len) {
     Serial.println();
 }
 
+//other task for simulate data proccess 
 void data_process_f(void *arg){
   uint8_t buffer[UBX_MAX_PACKET_SIZE_GNSS];
 
@@ -103,6 +105,7 @@ void data_process_f(void *arg){
       }
     
     }
+    //core 0 avoid core pannic 
     vTaskDelay(1);
   }
 
@@ -193,6 +196,7 @@ void setup() {
   
   Serial.begin(115200);
 
+  // config for ubx devider 
   ubx_config confi{
     .queue_data_size = 700,
     .queue_event_size = 700,
@@ -200,6 +204,7 @@ void setup() {
     .event_delay = 0,
     .update_delay = 0
   };
+  
   my_gps.begin(&confi);
   uart_setup();
 
